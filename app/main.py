@@ -16,19 +16,25 @@ class Ship:
         self.is_drowned = is_drowned
         if start[1] != end[1]:
 
-            step = 1 if end[1] - start[1] >= 0 else - 1
+            self.vector_x = 1 if end[1] - start[1] >= 0 else - 1
+            self.vector_y = 0
             self.decks = [Deck(start[0], x)
-                          for x in range(start[1], end[1] + step, step)]
+                          for x in range(start[1],
+                                         end[1] + self.vector_x,
+                                         self.vector_x)]
 
         elif start[0] != end[0]:
-            step = 1 if end[0] - start[0] >= 0 else - 1
+            self.vector_y = 1 if end[0] - start[0] >= 0 else - 1
+            self.vector_x = 0
             self.decks = [Deck(y, end[1])
-                          for y in range(start[0], end[0] + step, step)]
+                          for y in range(start[0],
+                                         end[0] + self.vector_y,
+                                         self.vector_y)]
 
         else:
             self.decks = [Deck(start[0], start[1])]
 
-        self.coord = self.get_coord()
+        self.coords: list[tuple[int, int]] = self.get_coord()
 
     def get_deck(self, row: int, column: int) -> Deck | None:
         for deck in self.decks:
@@ -48,9 +54,9 @@ class Ship:
 
         if self.is_ship_alive():
             return "Hit!"
-        else:
-            self.is_drowned = True
-            return "Sunk!"
+
+        self.is_drowned = True
+        return "Sunk!"
 
     def is_ship_alive(self) -> bool:
         return any([deck.is_alive for deck in self.decks])
@@ -59,13 +65,16 @@ class Ship:
         return [(deck.row, deck.column) for deck in self.decks]
 
     def __len__(self) -> int:
-        return len(self.coord)
+        return len(self.coords)
 
     def __repr__(self) -> str:
-        return f"{self.coord}"
+        return f"{self.coords}"
 
     def __contains__(self, item: Any) -> bool:
-        return item in self.coord
+        return item in self.coords
+
+    def __iter__(self) -> iter:
+        return iter(self.coords)
 
 
 class Battleship:
@@ -73,23 +82,48 @@ class Battleship:
         self.field = [["~" for _ in range(10)] for _ in range(10)]
 
         self.ships = self.create_ships(ships)
-        if not self._validate_field():
-            raise ValueError("Your ships is not correct for the game")
+
+        self._validate_field()
 
         self.draw_ships()
 
     def create_ships(self, ships: list[tuple, tuple]) -> list[Ship]:
-
         return [Ship(*ship) for ship in ships]
 
     def _validate_field(self) -> bool:
+        def check_neighbor_decks(ship: Ship) -> None:
+
+            neighbor = {(y, x)
+                        for x in range(ship.coords[0][1] - 1,
+                                       ship.coords[-1][1] + 2)
+
+                        for y in range(ship.coords[0][0] - 1,
+                                       ship.coords[-1][0] + 2)
+
+                        if 0 < x < 10 and 0 < y < 10}
+
+            neighbor -= set(ship.coords)
+
+            for coord in neighbor:
+                try:
+                    if not self.field[coord[0]][coord[1]] == "~":
+                        raise ValueError
+
+                except IndexError:
+                    print("Index error")
+
+                except ValueError:
+                    raise ValueError("Your ships is not correct for the game")
+
         length_ships = [len(ship) for ship in self.ships]
         length_ships.sort()
 
-        if length_ships == [1, 1, 1, 1, 2, 2, 2, 3, 3, 4]:
-            return True
+        if not length_ships == [1, 1, 1, 1, 2, 2, 2, 3, 3, 4]:
+            return False
 
-        return False
+        for ship in self.ships:
+            check_neighbor_decks(ship)
+        return True
 
     def draw_ship_on_field(self, ship: Ship) -> None:
         ship_coords = ship.get_coord()
@@ -103,7 +137,18 @@ class Battleship:
 
     def fire(self, location: tuple[int, int]) -> str:
         for ship in self.ships:
+
             if location in ship:
-                return ship.fire(location[0], location[1])
+
+                result = ship.fire(location[0], location[1])
+                if result == "Hit!":
+                    self.field[location[0]][location[1]] = "*"
+                    return result
+
+                if result == "Sunk!":
+                    for coord in ship:
+                        self.field[coord[0]][coord[1]] = "x"
+
+                    return result
 
         return "Miss!"

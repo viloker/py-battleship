@@ -83,9 +83,9 @@ class Battleship:
 
         self.ships = self.create_ships(ships)
 
-        self._validate_field()
-
         self.draw_ships()
+
+        self._validate_field()
 
     def create_ships(self, ships: list[tuple, tuple]) -> list[Ship]:
         return [Ship(*ship) for ship in ships]
@@ -100,7 +100,7 @@ class Battleship:
                         for y in range(ship.coords[0][0] - 1,
                                        ship.coords[-1][0] + 2)
 
-                        if 0 < x < 10 and 0 < y < 10}
+                        if 0 <= x < 10 and 0 <= y < 10}
 
             neighbor -= set(ship.coords)
 
@@ -145,10 +145,14 @@ class Battleship:
                     self.field[location[0]][location[1]] = "*"
                     return result
 
-                if result == "Sunk!":
+                elif result == "Sunk!":
                     for coord in ship:
                         self.field[coord[0]][coord[1]] = "x"
 
                     return result
 
         return "Miss!"
+
+    def print_field(self) -> None:
+        for row in self.field:
+            print(*row)
